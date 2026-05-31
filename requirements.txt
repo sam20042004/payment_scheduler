@@ -1,0 +1,8 @@
+exceptiongroup==1.3.1
+iniconfig==2.1.0
+packaging==26.2
+pluggy==1.6.0
+Pygments==2.20.0
+pytest==8.4.2
+tomli==2.4.1
+typing_extensions==4.15.0
