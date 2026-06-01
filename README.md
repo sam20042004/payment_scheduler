@@ -1,43 +1,3 @@
-# Settlement Feasibility & Fee Engine — Take-home
-
-Welcome, and thanks for taking the time. The full problem is in
-[`ASSIGNMENT.md`](./ASSIGNMENT.md). This README is just orientation.
-
-## The task in one line
-
-Given a client's escrow account, a settlement offer, and a creditor's rules,
-decide whether the offer is affordable (and schedule it, collecting our fee as
-early as allowed) or — if not — compute the minimum extra funding needed.
-
-## Setup
-
-```bash
-python3 -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
-```
-
-## Layout
-
-```
-hiring_takehome/
-├── ASSIGNMENT.md            # full specification — read this
-├── feasibility/
-│   ├── models.py            # data models, JSON loaders, date/EOM helpers (provided)
-│   └── engine.py            # >>> implement evaluate_offer here <<< (+ Result shape)
-├── cases/                   # four example cases (client.json / offer.json / creditor_rules.json)
-│   ├── case1_feasible_even
-│   ├── case2_infeasible_minima
-│   ├── case3_balloon
-│   └── case4_tiers
-├── tests/
-│   ├── test_smoke.py        # scaffolding sanity tests (pass out of the box)
-│   └── test_cases.py        # example expectations — make these pass, then add your own
-├── run.py                   # python run.py cases/<case>
-└── requirements.txt
-```
-
-## Run
-
 ```bash
 # evaluate a single case (prints the Result as JSON)
 python run.py cases/case1_feasible_even
@@ -46,16 +6,28 @@ python run.py cases/case1_feasible_even
 pytest -q
 ```
 
-Out of the box, `tests/test_smoke.py` passes and `tests/test_cases.py` fails —
-the latter is your target. Go beyond those four cases with your own tests.
+My Approach - 
+So the first step was to try calculating the feasibility 
+To know the feasibility - I tried making the worst case possible, i.e. the most back-loaded schedule, and tried simulating it, if it ain't feasible then there is no other feasible solution, i can prove it.
 
-## What to submit
+for Even - just took my the max k, and distributed the offer_total over all k,
+for Balloon - just took the minimum possible value at each date, and just add the remaining offer_total to the last cadence date.
+for staircase - always consider max_segment, first make each segment viable(each must have same value and the minimum possible), and then tried using the remaining sum to increase the value of the segments from the back side.
 
-Your implementation, your tests, and a short README section describing:
-- your approach and the alternatives you considered,
-- **your interpretation of the payment shapes** (even / staircase / balloon — we
-  left these loosely defined on purpose),
-- assumptions you made, and known edge cases / limitations.
+so after getting the payment schedule, for feasibility, we can just assume that we collected our program_fee on the last cadence date (the worst case), and then tried the simulation, if net balance at each date >= 0 then feasible otherwise infeasible, 
 
-Budget ~5–6 hours. Prefer a correct, well-tested core over breadth. When in
-doubt, write down your assumption and keep going.
+Interestingly, the payment schedule I made above was the final answer, i can prove it, just we need to distribute the program fee from the starting cadence date, as high as possible,
+
+Program fee allocation - 
+starting from the each cadence date, after calcualting, every debit and credit on that date, I tried giving net balance whole to the program fee, and then next date, at any point, if my balance becomes -ve, then i tried reducing or removing the program fee from the recently processed cadence dates, and keep doing it until balance becomes >= 0, and reassign the reduced/removed program fee to the next dates, because we have already calcualted the feasibility, and we know that this program fee is feasible, so we are just trying to allocate that as early as possible
+
+if infeasible - 
+interestingly, the same payment schedule can be used to calculate the lump sum and monthly increment, i can prove it.
+Lump Sum
+I considered the same schedule where we were collecting program fee at the last cadence date, as our target here is to make the schedule feasible, not to collect the program fee as ealy as possible, and then i ran siumlation
+and found the most -ve balance at any date, this becomes our lump sum and first date where balance became -ve becomes our date of applying the lump sum
+
+Monthly increment
+Considering the same schedule with program fee collected at the last cadence date, while running simulation, i tried maintaining count of draft dates passed (after the as_of_date), and whenever the balance becomes -ve, i tried calculating a number such that (no_of_draft_dates_passed * number >= abs(balance)), and took the maximum of this and it became our monthly increment, no_of_draft dates will be the future draft dates after the as_of_date.
+
+
